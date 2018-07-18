@@ -35,3 +35,19 @@ function getTotal(inputs) {
     );
     return result;
 }
+
+function getPromotions(total) {
+    const result = [];
+    const promotions = require('./datbase').loadPromotions();
+    total.forEach(
+        item => {
+            if (promotions[0].barcodes.includes(item.item.barcode)) {
+                result.push({
+                    item: item.item,
+                    count: 1
+                });
+            }
+        }
+    );
+    return result;
+}
