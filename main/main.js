@@ -1,7 +1,7 @@
 module.exports = function printInventory(inputs) {
     const total = getTotal(inputs);
-    const promotion = getPromotions(total);
-    const receipt = generateReceipt(total, promotion);
+    const totalWithPromotion = getPromotions(total);
+    const receipt = generateReceipt(totalWithPromotion);
     console.log(receipt);
 };
 
@@ -27,46 +27,45 @@ function getTotal(inputs) {
 }
 
 function getPromotions(total) {
-    const result = [];
     const promotions = require('./datbase').loadPromotions();
     total.forEach(
         item => {
             if (promotions[0].barcodes.includes(item.item.barcode)) {
-                result.push({
-                    item: item.item,
-                    count: 1
-                });
+                item.promotionCount = 1;
             }
         }
     );
-    return result;
+    return total;
 }
 
-function generateReceipt(total, promotions) {
+function generateReceipt(totalWithPromotion) {
     let amount = 0;
     let promotionAmout = 0;
-    let result = '***<没钱赚商店>购物清单***\n';
-    total.forEach(
-        item => {
-            const subtotal = item.item.price * item.count;
-            amount += subtotal;
-            result += `名称：${item.item.name}，数量：${item.count}${item.item.unit}，单价：${item.item.price.toFixed(2)}(元)，小计：${subtotal.toFixed(2)}(元)`;
-            result += '\n';
-        }
-    );
-    result += '----------------------\n挥泪赠送商品：\n';
-    promotions.forEach(
-        item => {
-            const subtotal = item.item.price * item.count;;
-            promotionAmout += subtotal;
-            result += `名称：${item.item.name}，数量：${item.count}${item.item.unit}`;
-            result += '\n';
-        }
-    );
-    result += '----------------------\n' +
-        `总计：${amount.toFixed(2)}(元)` + '\n' +
-        `节省：${promotionAmout.toFixed(2)}(元)` + '\n' +
-        '**********************';
+    const head = '***<没钱赚商店>购物清单***\n';
+    const end = '**********************';
+    const sep = '----------------------\n';
+    const promoHead = '挥泪赠送商品：\n';
+    let receiptTotal = '';
+    let receiptPromo = '';
 
-    return result;
+    totalWithPromotion.forEach(
+        item => {
+            let subtotal;
+            if (item.promotionCount) {
+                subtotal = item.item.price * (item.count - item.promotionCount);
+                const promotionTotal = item.item.price * item.promotionCount;
+                promotionAmout += promotionTotal;
+                receiptPromo += `名称：${item.item.name}，数量：${item.promotionCount}${item.item.unit}` + '\n';
+            } else {
+                subtotal = item.item.price * item.count;
+            }
+            amount += subtotal;
+            receiptTotal += `名称：${item.item.name}，数量：${item.count}${item.item.unit}，单价：${item.item.price.toFixed(2)}(元)，小计：${subtotal.toFixed(2)}(元)`;
+            receiptTotal += '\n';
+        }
+    );
+    const info = `总计：${amount.toFixed(2)}(元)` + '\n' +
+        `节省：${promotionAmout.toFixed(2)}(元)` + '\n';
+
+    return head + receiptTotal + sep + promoHead + receiptPromo + sep + info + end;
 }
